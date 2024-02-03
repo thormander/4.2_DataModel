@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-AppStarter<hibernate>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "edu.baylor.cs.se.hibernate.AppStarter",
+            "projectName": "hibernate",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-AppStarter<appstarter>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "edu.baylor.cs.se.hibernate.AppStarter",
+            "projectName": "appstarter",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
