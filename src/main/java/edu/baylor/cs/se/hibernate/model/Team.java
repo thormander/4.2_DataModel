@@ -4,6 +4,14 @@ import jakarta.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @Entity
 @Table(name = "TEAM")
 public class Team {
@@ -28,7 +36,7 @@ public class Team {
     @ManyToOne
     private Contest contest;
 
-    @OneToOne
+    @ManyToOne
     private Person coach;
 
     // Self-loop for Clone
@@ -105,7 +113,17 @@ public class Team {
 
     public void setCoach(Person coach) {
         this.coach = coach;
+        coach.getCoachedTeams().add(this);
     }
+
+    public TeamState getTeamState() {
+        return teamState;
+    }
+
+    public void setTeamState(TeamState teamState) {
+        this.teamState = teamState;
+    }
+
     public enum TeamState {
         ACCEPTED, PENDING, CANCELED
     }

@@ -2,6 +2,7 @@ package edu.baylor.cs.se.hibernate.services;
 
 import edu.baylor.cs.se.hibernate.model.Person;
 import edu.baylor.cs.se.hibernate.model.Team;
+import edu.baylor.cs.se.hibernate.model.Team.TeamState;
 import edu.baylor.cs.se.hibernate.model.Contest;
 import edu.baylor.cs.se.hibernate.services.PersonRepository;
 
@@ -14,11 +15,13 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 
 import java.time.LocalDate;
+import java.time.Period;
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 //Spring annotations, feel free to ignore it
 @Repository
@@ -37,20 +40,20 @@ public class SuperRepository {
         manager.setUniversity("Manager University");
         em.persist(manager);
     
-        Contest mainContest = createContest("Main Contest", 1000, new Date(), true, new Date(), new Date());
+        Contest mainContest = createContest("Main Contest", 1000, new Date(), true);
         em.persist(mainContest);
     
-        Contest subContest = createContest("Sub Contest", 500, new Date(), true, new Date(), new Date());
+        Contest subContest = createContest("Sub Contest", 500, new Date(), true);
         subContest.setParentContest(mainContest);
         subContest.getManagers().add(manager);
         em.persist(subContest);
     
         // Teams
-        Team team1 = createTeam("Team 1", 1, "State 1");
+        Team team1 = createTeam("Team 1", 1, "State 1", TeamState.ACCEPTED);
         team1.setContest(subContest);
-        Team team2 = createTeam("Team 2", 2, "State 2");
+        Team team2 = createTeam("Team 2", 2, "State 2", TeamState.PENDING);
         team2.setContest(subContest);
-        Team team3 = createTeam("Team 3", 3, "State 3");
+        Team team3 = createTeam("Team 3", 3, "State 3", TeamState.PENDING);
         team3.setContest(subContest);
     
         // Coaches
@@ -93,29 +96,149 @@ public class SuperRepository {
         return person;
     }
     
-    private Team createTeam(String name,int rank,String state){
+    private Team createTeam(String name,int rank,String state,TeamState state2){
         Team team = new Team();
 
         team.setName(name);
         team.setRank(rank);
         team.setState(state);
+        team.setTeamState(state2);
 
         em.persist(team);
         return team;
     }
 
-    private Contest createContest(String name, int capacity,Date date, boolean registrationAllowed, Date registrationFrom, Date registrationTo){
+    private Contest createContest(String name, int capacity,Date date,Boolean editable){
         Contest contest = new Contest();
         
         contest.setName(name);
         contest.setCapacity(capacity);
         contest.setDate(date);
-        contest.setRegistrationAllowed(registrationAllowed);
-        contest.setRegistrationFrom(registrationFrom);
-        contest.setRegistrationTo(registrationTo);
+        contest.setEditable(editable);
 
         em.persist(contest);
         return contest;
+    }
+
+    // Task 1 stuff for adding a team
+    public Team registerTeamToContest(Long contestId, Team team) {
+        Contest contest = em.find(Contest.class, contestId);
+
+        String check = "";
+
+        if (contest == null || contest.getTeams().size() >= contest.getCapacity()) {
+            check = "notpass";
+            System.out.println("Contest has no more spots for a team.");
+        }
+    
+        // Check team has one coach and exactly three team members
+        if (team.getCoach() == null || team.getMembers().size() != 3) {
+            check = "notpass";
+            System.out.println("Team does not meet requirements (no coach / not enough people)");
+        }
+    
+        // Check team members are distinct by email
+        Set<String> uniqueMemberEmails = team.getMembers().stream()
+                                            .map(Person::getEmail)
+                                            .collect(Collectors.toSet());
+        if (uniqueMemberEmails.size() != 3) {
+            check = "notpass";
+            System.out.println("Team members not unique / Not enough people");
+        }
+    
+        // Manually save the coach if it's a new entity
+        if (team.getCoach() != null && team.getCoach().getId() == null) {
+            em.persist(team.getCoach()); // Persist the coach
+        }
+    
+        // Manually save team members if they are new entities
+        for (Person member : team.getMembers()) {
+            if (member.getId() == null) {
+                em.persist(member); // Persist the member
+            }
+        }
+    
+        // Check team members are younger than 24
+        Date currentDate = new Date();
+        for (Person member : team.getMembers()) {
+            LocalDate birthDate = member.getBirthdate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate currentDateLocal = currentDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            if (Period.between(birthDate, currentDateLocal).getYears() >= 24) {
+                check = "notpass";
+                System.out.println("Someone is not younger than 24");
+            }
+        }
+    
+        // Check team members are not in another team in the same contest
+        for (Team existingTeam : contest.getTeams()) {
+            for (Person member : team.getMembers()) {
+                if (existingTeam.getMembers().contains(member)) {
+                    check = "notpass";
+                    System.out.println("A member is already part of another team");
+                }
+            }
+        }
+
+    
+        
+        // Set the team state based on conditions if they pass or not
+        if (check == "") {
+            team.setTeamState(Team.TeamState.ACCEPTED);
+        } else {
+            team.setTeamState(Team.TeamState.CANCELED);
+        }
+
+    
+        // Save the team and update the contest
+        team.setContest(contest);
+        em.persist(team);
+        contest.getTeams().add(team);
+        em.merge(contest);
+    
+        return team;
+    }
+
+    // Task 2 stuff 
+    public Team editTeam(Team team) {
+        return em.merge(team);
+    }
+
+    public Contest editContest(Contest contest) {
+        return em.merge(contest);
+    }
+
+    public Contest setEditable(Contest contest) {
+        contest.setEditable(true);
+        return em.merge(contest);
+    }
+
+    public Contest setReadOnly(Contest contest) {
+        contest.setEditable(false);
+        return em.merge(contest);
+    }
+    
+    public Contest findContestById(Long contestId) {
+        return em.find(Contest.class, contestId);
+    }
+
+    public Team findTeamById(Long teamId) {
+        return em.find(Team.class, teamId);
+    }
+
+    public Contest updateContest(Contest contest) {
+        return em.merge(contest);
+    }
+
+    public boolean isWritable(Contest contest) {
+        return contest.isEditable();
+    }
+    
+
+    // Task 3 stuff
+    
+    public Team saveTeam(Team team) {
+        em.persist(team);
+        return team;
     }
  
 }

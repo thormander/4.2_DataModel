@@ -5,6 +5,12 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @Entity
 @Table(name = "CONTEST")
 public class Contest {
@@ -16,19 +22,14 @@ public class Contest {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
+    private boolean editable;
+
     private int capacity;
 
     @Temporal(TemporalType.DATE)
     private Date date;
 
-    @Column(nullable = false)
-    private boolean registrationAllowed;
-
-    @Temporal(TemporalType.DATE)
-    private Date registrationFrom;
-
-    @Temporal(TemporalType.DATE)
-    private Date registrationTo;
 
     @OneToMany(mappedBy = "contest", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Team> teams = new HashSet<>();
@@ -50,6 +51,14 @@ public class Contest {
     private Set<Person> managers = new HashSet<>();
 
     // Constructors, getters, and setters
+
+    public boolean isEditable() {
+        return editable;
+    }
+
+    public void setEditable(boolean editable) {
+        this.editable = editable;
+    }
 
     public Long getId() {
         return id;
@@ -77,30 +86,6 @@ public class Contest {
 
     public void setDate(Date date) {
         this.date = date;
-    }
-
-    public boolean isRegistrationAllowed() {
-        return registrationAllowed;
-    }
-
-    public void setRegistrationAllowed(boolean registrationAllowed) {
-        this.registrationAllowed = registrationAllowed;
-    }
-
-    public Date getRegistrationFrom() {
-        return registrationFrom;
-    }
-
-    public void setRegistrationFrom(Date registrationFrom) {
-        this.registrationFrom = registrationFrom;
-    }
-
-    public Date getRegistrationTo() {
-        return registrationTo;
-    }
-
-    public void setRegistrationTo(Date registrationTo) {
-        this.registrationTo = registrationTo;
     }
 
     public Set<Team> getTeams() {

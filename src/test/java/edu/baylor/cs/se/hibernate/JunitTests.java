@@ -15,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import edu.baylor.cs.se.hibernate.model.Contest;
 import edu.baylor.cs.se.hibernate.model.Person;
 import edu.baylor.cs.se.hibernate.model.Team;
+import edu.baylor.cs.se.hibernate.model.Team.TeamState;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
@@ -115,7 +116,7 @@ public class JunitTests {
 
     public void populate() {
        
-        // Create contest manager directly
+        // Contest manager
         Person manager = new Person();
         manager.setName("Manager");
         manager.setEmail("manager@manager.com");
@@ -123,25 +124,23 @@ public class JunitTests {
         manager.setUniversity("Manager University");
         em.persist(manager);
     
-        // Create main contest
-        Contest mainContest = createContest("Main Contest", 1000, new Date(), true, new Date(), new Date());
+        Contest mainContest = createContest("Main Contest", 1000, new Date(), true);
         em.persist(mainContest);
     
-        // Create subcontest and set it as a child of the main contest
-        Contest subContest = createContest("Sub Contest", 500, new Date(), true, new Date(), new Date());
+        Contest subContest = createContest("Sub Contest", 500, new Date(), true);
         subContest.setParentContest(mainContest);
         subContest.getManagers().add(manager);
         em.persist(subContest);
     
-        // Create teams and assign them to the subcontest
-        Team team1 = createTeam("Team 1", 1, "State 1");
+        // Teams
+        Team team1 = createTeam("Team 1", 1, "State 1", TeamState.ACCEPTED);
         team1.setContest(subContest);
-        Team team2 = createTeam("Team 2", 2, "State 2");
+        Team team2 = createTeam("Team 2", 2, "State 2", TeamState.PENDING);
         team2.setContest(subContest);
-        Team team3 = createTeam("Team 3", 3, "State 3");
+        Team team3 = createTeam("Team 3", 3, "State 3", TeamState.PENDING);
         team3.setContest(subContest);
     
-        // Create coaches for each team
+        // Coaches
         Person coach1 = createPerson("Coach 1", "coach1@gmail.com", new Date(25, 12, 15), "University 1");
         team1.setCoach(coach1);
         Person coach2 = createPerson("Coach 2", "coach2@gmail.com", new Date(25, 12, 15), "University 2");
@@ -150,8 +149,7 @@ public class JunitTests {
         team3.setCoach(coach3);
 
 
-        // Add players directly to each team without using a loop
-        // Assuming `createPerson` method is preferred for players and coaches for simplicity
+        // Players
         team1.getMembers().add(createPerson("Player 1 Team 1", "player1team1@gmail.com",new Date(5, 12, 15), "University 1"));
         team1.getMembers().add(createPerson("Player 2 Team 1", "player2team1@gmail.com",new Date(5, 12, 15), "University 1"));
         team1.getMembers().add(createPerson("Player 3 Team 1", "player3team1@gmail.com", new Date(5, 12, 15), "University 1"));
@@ -164,12 +162,12 @@ public class JunitTests {
         team3.getMembers().add(createPerson("Player 2 Team 3", "player2team3@gmail.com", new Date(50, 12, 15), "University 3"));
         team3.getMembers().add(createPerson("Player 3 Team 3", "player3team3@gmail.com", new Date(50, 12, 15), "University 3"));
     
-        // Persist the teams
+        // Persist 
         em.persist(team1);
         em.persist(team2);
         em.persist(team3);
     }
- 
+    
     private Person createPerson(String name,String email,Date birthdate,String university){
         Person person = new Person();
 
@@ -181,28 +179,26 @@ public class JunitTests {
         em.persist(person);
         return person;
     }
-
-
-    private Team createTeam(String name,int rank,String state){
+    
+    private Team createTeam(String name,int rank,String state,TeamState state2){
         Team team = new Team();
 
         team.setName(name);
         team.setRank(rank);
         team.setState(state);
+        team.setTeamState(state2);
 
         em.persist(team);
         return team;
     }
 
-    private Contest createContest(String name, int capacity,Date date, boolean registrationAllowed, Date registrationFrom, Date registrationTo){
+    private Contest createContest(String name, int capacity,Date date,Boolean editable){
         Contest contest = new Contest();
         
         contest.setName(name);
-        contest.setDate(date);
         contest.setCapacity(capacity);
-        contest.setRegistrationAllowed(registrationAllowed);
-        contest.setRegistrationFrom(registrationFrom);
-        contest.setRegistrationTo(registrationTo);
+        contest.setDate(date);
+        contest.setEditable(editable);
 
         em.persist(contest);
         return contest;
